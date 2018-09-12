@@ -1,0 +1,12 @@
+body {
+    margin: 0px;
+    background-color: rgb(56,220, 250);
+    overflow: hidden;
+}
+
+.title {
+    font-family: 'Roboto', sans-serif;
+    font-size: 50px;
+    color: navy;
+    text-align: center;
+}
