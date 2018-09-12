@@ -152,8 +152,21 @@ function Component(width, height, color, x, y) {
    * where t = 1 time tick, and a = 0 (or velocity is changed manually)
    */
   this.newPos = function() {
+    // move the object's position
     this.x += this.speedX;
     this.y += this.speedY;
+
+    // check to make sure we are not off the edge
+    if (this.x < 0) { // left edge
+      this.x = 0;
+    } else if (this.x > (SCREEN_X - this.width)) { // right edge
+      this.x = SCREEN_X - this.width;
+    }
+    if (this.y < 0) { // left edge
+      this.y = 0;
+    } else if (this.y > (SCREEN_Y - this.height)) { // right edge
+      this.y = SCREEN_Y - this.height;
+    }
   };
 
   /**
