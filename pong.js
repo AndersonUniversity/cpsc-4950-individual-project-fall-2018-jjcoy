@@ -15,6 +15,10 @@ let ball;
 let leftEdge;
 /** right edge of screen */
 let rightEdge;
+/** top edge of screen */
+let topEdge;
+/** bottom edge of screen */
+let bottomEdge;
 
 /** @const {number} SCREEN_X x dimension of screen */
 const SCREEN_X = 480;
@@ -63,12 +67,17 @@ function startGame() {
   // ball starts in the middle, moving with an initial velocity
   ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
   ball.speedX = BALL_SPEED;
-  ball.speedY = 0;
+  ball.speedY = Math.random() * BALL_SPEED;  // random Y speed
 
   // create left and right boundaries, which are not drawn, just used
   // to detect if ball reaches the edge
   leftEdge = new Component(1, SCREEN_Y, "black", -1, 0);
   rightEdge = new Component(1, SCREEN_Y, "black", SCREEN_X+1, 0);
+
+  // create top and bottom boundaries, which are not drawn, but
+  // used to detect if the ball bounces off the top/bottom
+  topEdge = new Component(SCREEN_X, 1, "black", 0, -1);
+  bottomEdge = new Component(SCREEN_X, 1, "black", 0, SCREEN_Y+1);
 }
 
 /**
@@ -120,6 +129,7 @@ let PongGame = {
    */
   stop : function() {
     clearInterval(this.interval);
+    // TODO: Add end of game message
   }
 }; // the PongGame class
 
@@ -243,11 +253,13 @@ function updateGameArea() {
   // see if we had collisions, or can just redraw
   if (leftPaddle.crashWith(ball) || (rightPaddle.crashWith(ball))) {
     // detect if two objects crashed together
-    // if we had a collision, stop
+    // if we had a collision, bounce
     ball.bounce();
+    // TODO:  Add a point for each bounce
   } else if (ball.crashWith(leftEdge) || ball.crashWith(rightEdge)) {
     // ball went off the left or right edge
     PongGame.stop();
+    // TODO: add an else-if ball hits top/bottom and bounces
   } else {
     // no collision, so redraw the screen and move everything
     // clear the screen
