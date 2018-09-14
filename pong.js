@@ -162,14 +162,14 @@ function Component(width, height, color, x, y) {
     this.y += this.speedY;
 
     // check to make sure we are not off the edge
-    if (this.x < 0) { // left edge
-      this.x = 0;
-    } else if (this.x > (SCREEN_X - this.width)) { // right edge
-      this.x = SCREEN_X - this.width;
-    }
-    if (this.y < 0) { // left edge
+    // if (this.x < 0) { // left edge
+    //   this.x = 0;
+    // } else if (this.x > (SCREEN_X - this.width)) { // right edge
+    //   this.x = SCREEN_X - this.width;
+    // }
+    if (this.y < 0) { // top edge
       this.y = 0;
-    } else if (this.y > (SCREEN_Y - this.height)) { // right edge
+    } else if (this.y > (SCREEN_Y - this.height)) { // bottom edge
       this.y = SCREEN_Y - this.height;
     }
   };
@@ -210,7 +210,21 @@ function Component(width, height, color, x, y) {
 
     // true if overlap (collide), false otherwise
     return crash;
-  }
+  };
+
+  /**
+   * Reverse direction, as if it is bouncing off an object.
+   */
+  this.bounce = function() {
+    // reverse directions
+    this.speedX = 0-this.speedX;
+    // need to back the ball up, or it will get into an infinite
+    // loop of collisions!
+    this.x += this.speedX;
+    // repeat for the y direction
+    this.speedY = -this.speedY;
+    this.y += this.speedY;
+  };
 }
 
 /**
@@ -220,9 +234,7 @@ function updateGameArea() {
   // detect if two objects crashed together
   if (leftPaddle.crashWith(ball) || (rightPaddle.crashWith(ball))) {
     // if we had a collision, stop
-    // TODO:  we actually want the ball to bounce here!
-    // TODO:  we also need to detect if the ball went over the top of the screen
-    PongGame.stop();
+    ball.bounce();
   } else {  // no collision, so redraw the screen and move everything
     // clear the screen
     PongGame.clear();
