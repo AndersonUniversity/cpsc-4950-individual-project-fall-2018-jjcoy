@@ -157,7 +157,16 @@ let PongGame = {
    */
   stop : function() {
     clearInterval(this.interval);
-    // TODO: Add end of game message
+    // clear screen
+    this.clear();
+    // draw end of game message
+    let ctx = PongGame.context;
+    ctx.font = '42px Arial';
+    ctx.fillStyle = PADDLE_COLORS;
+    ctx.textAlign = 'center';
+    // note that string literals use back-single-quotes
+    ctx.fillText('Game Over!',SCREEN_X/2, SCREEN_Y/2);
+    ctx.fillText(`Score ${score}`,SCREEN_X/2, SCREEN_Y/2+42);
   }
 }; // the PongGame class
 
