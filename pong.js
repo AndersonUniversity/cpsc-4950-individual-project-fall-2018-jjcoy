@@ -34,6 +34,8 @@ const PADDLE_HEIGHT = 75;
 const BALL_DIM = 20;
 /** @const {number} BALL_SPEED the speed of the ball */
 const BALL_SPEED = 2;
+/** @const {number} RANDOM_EFFECT the max size of the randomness added */
+const RANDOM_EFFECT = 4;
 /** @const {number} PADDLE_SPEED the speed of the paddle */
 const PADDLE_SPEED = 3;
 /** @const {number} A_KEY the keycode of the 'a' key */
@@ -67,7 +69,11 @@ function startGame() {
   // ball starts in the middle, moving with an initial velocity
   ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
   ball.speedX = BALL_SPEED;
-  ball.speedY = Math.random() * BALL_SPEED;  // random Y speed
+  ball.speedY = Math.random() * RANDOM_EFFECT;  // random Y speed
+  // randomly go up or down (random() returns a number between 0 and 1)
+  if ((Math.random() < 0.5)) {
+     ball.speedY = -ball.speedY;
+  }
 
   // create left and right boundaries, which are not drawn, just used
   // to detect if ball reaches the edge
@@ -235,6 +241,8 @@ function Component(width, height, color, x, y) {
    * Reverse direction, as if it is bouncing off an object.
    */
   this.bounce = function() {
+    // TODO:  Add randomness to the x and y speeds when they bounce off the
+    // paddle
     // reverse directions
     this.speedX = 0-this.speedX;
     // need to back the ball up, or it will get into an infinite
