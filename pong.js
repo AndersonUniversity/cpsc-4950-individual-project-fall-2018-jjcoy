@@ -11,6 +11,10 @@ let leftPaddle;
 let rightPaddle;
 /** the ball object */
 let ball;
+/** left edge of screen */
+let leftEdge;
+/** right edge of screen */
+let rightEdge;
 
 /** @const {number} SCREEN_X x dimension of screen */
 const SCREEN_X = 480;
@@ -60,6 +64,11 @@ function startGame() {
   ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
   ball.speedX = BALL_SPEED;
   ball.speedY = 0;
+
+  // create left and right boundaries, which are not drawn, just used
+  // to detect if ball reaches the edge
+  leftEdge = new Component(1, SCREEN_Y, "black", -1, 0);
+  rightEdge = new Component(1, SCREEN_Y, "black", SCREEN_X+1, 0);
 }
 
 /**
@@ -231,14 +240,23 @@ function Component(width, height, color, x, y) {
  * Redraw the game area every few milliseconds
  */
 function updateGameArea() {
-  // detect if two objects crashed together
+  // see if we had collisions, or can just redraw
   if (leftPaddle.crashWith(ball) || (rightPaddle.crashWith(ball))) {
+    // detect if two objects crashed together
     // if we had a collision, stop
     ball.bounce();
-  } else {  // no collision, so redraw the screen and move everything
+  } else if (ball.crashWith(leftEdge) || ball.crashWith(rightEdge)) {
+    // ball went off the left or right edge
+    PongGame.stop();
+  } else {
+    // no collision, so redraw the screen and move everything
     // clear the screen
     PongGame.clear();
 
+
+    ///////
+    // Movement of the paddles
+    ///////
     // handle the left Paddle update
     leftPaddle.speedX = 0;
     leftPaddle.speedY = 0;
@@ -267,6 +285,9 @@ function updateGameArea() {
     rightPaddle.newPos();       // move it
     rightPaddle.update();       // draw it
 
+    ///////
+    // Movement of the ball
+    ///////
     // handle the ball update
     ball.newPos();              // move it
     ball.update();              // draw it
