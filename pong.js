@@ -36,6 +36,10 @@ const Z_KEY = 90;
 const UP_KEY = 38;
 /** @const {number} DOWN_KEY the keycode of the down arrow key */
 const DOWN_KEY = 40;
+/** @const {string} PADDLE_COLORS the colors of the paddles */
+const PADDLE_COLORS = "grey";
+/** @const {string} BALL_COLOR the color of the ball */
+const BALL_COLOR = "grey";
 
 /**
  * Sets up the game canvas and components of the game.
@@ -46,14 +50,14 @@ function startGame() {
   PongGame.start();
 
   // left paddle starts left side top
-  leftPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, 'red', OFFSET_X, 0);
+  leftPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLORS, OFFSET_X, 0);
 
   // right paddle starts right side bottom
-  rightPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, 'blue',
+  rightPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLORS,
       SCREEN_X - OFFSET_X - PADDLE_WIDTH, SCREEN_Y - PADDLE_HEIGHT);
 
   // ball starts in the middle, moving with an initial velocity
-  ball = new Component(BALL_DIM, BALL_DIM, 'black', SCREEN_X/2.0, SCREEN_Y/2.0);
+  ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
   ball.speedX = BALL_SPEED;
   ball.speedY = 0;
 }
@@ -75,7 +79,8 @@ let PongGame = {
 
     // get access to the canvas context, so we can draw on it
     this.context = this.canvas.getContext('2d');
-    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+    // insert the canvas into the DOM at the end, after the title
+    document.body.insertBefore(this.canvas, document.body.nextSibling);
 
     // over time, call updateGameArea frequently
     // (50 times per second, every 20 ms)
