@@ -19,6 +19,12 @@ let rightEdge;
 let topEdge;
 /** bottom edge of screen */
 let bottomEdge;
+/** game score */
+let score = 0;
+/** bounce count */
+let bounces = 0;
+/** paddleBounceEffect the current max size of the speed change */
+let paddleBounceEffect = 1;
 
 /** @const {number} SCREEN_X x dimension of screen */
 const SCREEN_X = 480;
@@ -36,8 +42,6 @@ const BALL_DIM = 20;
 const BALL_SPEED = 2;
 /** @const {number} RANDOM_EFFECT the max size of initial randomness added */
 const RANDOM_EFFECT = 4;
-/** @const {number} PADDLE_BOUNCE_EFFECT the max size of the paddle_bounce effect */
-const PADDLE_BOUNCE_EFFECT = 1;
 /** @const {number} PADDLE_SPEED the speed of the paddle */
 const PADDLE_SPEED = 3;
 /** @const {number} A_KEY the keycode of the 'a' key */
@@ -49,9 +53,15 @@ const UP_KEY = 38;
 /** @const {number} DOWN_KEY the keycode of the down arrow key */
 const DOWN_KEY = 40;
 /** @const {string} PADDLE_COLORS the colors of the paddles */
-const PADDLE_COLORS = "grey";
+const PADDLE_COLORS = 'grey';
 /** @const {string} BALL_COLOR the color of the ball */
-const BALL_COLOR = "grey";
+const BALL_COLOR = 'grey';
+/** @CONST {STRING} SCORE_COLOR the color of the score text */
+const SCORE_COLOR = 'blue';
+/** @const {number} SCORE_INCREMENT the number of bounces per point */
+const SCORE_INCREMENT = 1;
+/** @const {number} SPEED_INCREMENT the number of bounces per speed increase */
+const SPEED_INCREMENT = 1;
 
 /**
  * Sets up the game canvas and components of the game.
@@ -75,13 +85,13 @@ function startGame() {
 
   // create left and right boundaries, which are not drawn, just used
   // to detect if ball reaches the edge
-  leftEdge = new Component(1, SCREEN_Y, "black", -1, 0);
-  rightEdge = new Component(1, SCREEN_Y, "black", SCREEN_X+1, 0);
+  leftEdge = new Component(1, SCREEN_Y, 'black', -1, 0);
+  rightEdge = new Component(1, SCREEN_Y, 'black', SCREEN_X+1, 0);
 
   // create top and bottom boundaries, which are not drawn, but
   // used to detect if the ball bounces off the top/bottom
-  topEdge = new Component(SCREEN_X, 1, "black", 0, -1);
-  bottomEdge = new Component(SCREEN_X, 1, "black", 0, SCREEN_Y-1);
+  topEdge = new Component(SCREEN_X, 1, 'black', 0, -1);
+  bottomEdge = new Component(SCREEN_X, 1, 'black', 0, SCREEN_Y-1);
 }
 
 /**
@@ -248,15 +258,17 @@ function Component(width, height, color, x, y) {
    * Reverse direction, as if it is bouncing off a paddle.
    */
   this.paddle_bounce = function() {
+    // TODO:  Locate bug that causes occasional multi-bounces off a paddle
+
     // change the speed randomly
-    this.speedX += Math.random() * PADDLE_BOUNCE_EFFECT;
+    this.speedX += Math.random() * paddleBounceEffect;
     // reverse directions in X
     this.speedX = 0-this.speedX;
     // need to back the ball up, or it will get into an infinite
     // loop of collisions!
     this.x += this.speedX;
     // change the Y speed randomly, but do not reverse direction
-    this.speedY += Math.random() * PADDLE_BOUNCE_EFFECT;
+    this.speedY += Math.random() * paddleBounceEffect;
     // back the ball up
     this.y += this.speedY;
   };
@@ -288,18 +300,36 @@ function updateGameArea() {
     // detect if two objects crashed together
     // if we had a collision, paddle_bounce
     ball.paddle_bounce();
-    // TODO:  Add a point for each paddle_bounce, and speed up on increments
+    // count bounces
+    bounces++;
+    // add a point for every SCORE_INCREMENT bounces, then speed up
+    if (bounces % SCORE_INCREMENT === 0) {
+      score++;
+    }
+    // increase speed every few bounces
+    if (bounces % SPEED_INCREMENT === 0) {
+      paddleBounceEffect++;
+    }
   } else if (ball.collidesWith(leftEdge) || ball.collidesWith(rightEdge)) {
     // ball went off the left or right edge
     PongGame.stop();
   } else if (ball.collidesWith(topEdge) || ball.collidesWith(bottomEdge)) {
-    // TODO: add an else-if ball hits top/bottom and bounces
+    // if the ball hits the top or bottom edge
     ball.wall_bounce();
   } else {
     // no collision, so redraw the screen and move everything
     // clear the screen
     PongGame.clear();
 
+    ///////
+    // Draw score
+    ///////
+    let ctx = PongGame.context;
+    ctx.font = '24px Arial';
+    ctx.fillStyle = SCORE_COLOR;
+    ctx.textAlign = 'center';
+    // note that string literals use back-single-quotes
+    ctx.fillText(`Score ${score}`,SCREEN_X/2,30);
 
     ///////
     // Movement of the paddles
