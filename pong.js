@@ -11,6 +11,10 @@ let leftPaddle;
 let rightPaddle;
 /** the ball object */
 let ball;
+/** left edge of screen */
+let leftEdge;
+/** right edge of screen */
+let rightEdge;
 
 /** @const {number} SCREEN_X x dimension of screen */
 const SCREEN_X = 480;
@@ -36,6 +40,10 @@ const Z_KEY = 90;
 const UP_KEY = 38;
 /** @const {number} DOWN_KEY the keycode of the down arrow key */
 const DOWN_KEY = 40;
+/** @const {string} PADDLE_COLORS the colors of the paddles */
+const PADDLE_COLORS = "grey";
+/** @const {string} BALL_COLOR the color of the ball */
+const BALL_COLOR = "grey";
 
 /**
  * Sets up the game canvas and components of the game.
@@ -46,16 +54,21 @@ function startGame() {
   PongGame.start();
 
   // left paddle starts left side top
-  leftPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, 'red', OFFSET_X, 0);
+  leftPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLORS, OFFSET_X, 0);
 
   // right paddle starts right side bottom
-  rightPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, 'blue',
+  rightPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLORS,
       SCREEN_X - OFFSET_X - PADDLE_WIDTH, SCREEN_Y - PADDLE_HEIGHT);
 
   // ball starts in the middle, moving with an initial velocity
-  ball = new Component(BALL_DIM, BALL_DIM, 'black', SCREEN_X/2.0, SCREEN_Y/2.0);
+  ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
   ball.speedX = BALL_SPEED;
   ball.speedY = 0;
+
+  // create left and right boundaries, which are not drawn, just used
+  // to detect if ball reaches the edge
+  leftEdge = new Component(1, SCREEN_Y, "black", -1, 0);
+  rightEdge = new Component(1, SCREEN_Y, "black", SCREEN_X+1, 0);
 }
 
 /**
@@ -75,7 +88,8 @@ let PongGame = {
 
     // get access to the canvas context, so we can draw on it
     this.context = this.canvas.getContext('2d');
-    document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+    // insert the canvas into the DOM at the end, after the title
+    document.body.insertBefore(this.canvas, document.body.nextSibling);
 
     // over time, call updateGameArea frequently
     // (50 times per second, every 20 ms)
@@ -152,8 +166,21 @@ function Component(width, height, color, x, y) {
    * where t = 1 time tick, and a = 0 (or velocity is changed manually)
    */
   this.newPos = function() {
+    // move the object's position
     this.x += this.speedX;
     this.y += this.speedY;
+
+    // check to make sure we are not off the edge
+    // if (this.x < 0) { // left edge
+    //   this.x = 0;
+    // } else if (this.x > (SCREEN_X - this.width)) { // right edge
+    //   this.x = SCREEN_X - this.width;
+    // }
+    if (this.y < 0) { // top edge
+      this.y = 0;
+    } else if (this.y > (SCREEN_Y - this.height)) { // bottom edge
+      this.y = SCREEN_Y - this.height;
+    }
   };
 
   /**
@@ -192,23 +219,44 @@ function Component(width, height, color, x, y) {
 
     // true if overlap (collide), false otherwise
     return crash;
-  }
+  };
+
+  /**
+   * Reverse direction, as if it is bouncing off an object.
+   */
+  this.bounce = function() {
+    // reverse directions
+    this.speedX = 0-this.speedX;
+    // need to back the ball up, or it will get into an infinite
+    // loop of collisions!
+    this.x += this.speedX;
+    // repeat for the y direction
+    this.speedY = -this.speedY;
+    this.y += this.speedY;
+  };
 }
 
 /**
  * Redraw the game area every few milliseconds
  */
 function updateGameArea() {
-  // detect if two objects crashed together
+  // see if we had collisions, or can just redraw
   if (leftPaddle.crashWith(ball) || (rightPaddle.crashWith(ball))) {
+    // detect if two objects crashed together
     // if we had a collision, stop
-    // TODO:  we actually want the ball to bounce here!
-    // TODO:  we also need to detect if the ball went over the top of the screen
+    ball.bounce();
+  } else if (ball.crashWith(leftEdge) || ball.crashWith(rightEdge)) {
+    // ball went off the left or right edge
     PongGame.stop();
-  } else {  // no collision, so redraw the screen and move everything
+  } else {
+    // no collision, so redraw the screen and move everything
     // clear the screen
     PongGame.clear();
 
+
+    ///////
+    // Movement of the paddles
+    ///////
     // handle the left Paddle update
     leftPaddle.speedX = 0;
     leftPaddle.speedY = 0;
@@ -237,6 +285,9 @@ function updateGameArea() {
     rightPaddle.newPos();       // move it
     rightPaddle.update();       // draw it
 
+    ///////
+    // Movement of the ball
+    ///////
     // handle the ball update
     ball.newPos();              // move it
     ball.update();              // draw it
