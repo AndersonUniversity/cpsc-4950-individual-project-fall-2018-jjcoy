@@ -58,10 +58,15 @@ const PADDLE_COLORS = 'grey';
 const BALL_COLOR = 'grey';
 /** @CONST {STRING} SCORE_COLOR the color of the score text */
 const SCORE_COLOR = 'blue';
-/** @const {number} SCORE_INCREMENT the number of bounces per point */
-const SCORE_INCREMENT = 1;
-/** @const {number} SPEED_INCREMENT the number of bounces per speed increase */
-const SPEED_INCREMENT = 1;
+/** @const {number} BOUNCES_PER_SCORE the number of bounces per point */
+const BOUNCES_PER_SCORE = 1;
+/** @const {number} BOUNCES_PER_SPEEDUP the number of bounces per speed increase */
+const BOUNCES_PER_SPEEDUP = 5;
+/** @const {number} SPEED_INCREMENT the amount to speed up each time */
+const SPEED_INCREMENT = 0.5;
+/** @const {number} Y_ATTENUATOR the fraction to attenuate the y randomness
+ * to increase playability by reducing vertical speed */
+const Y_ATTENUATOR = 0.25;
 
 /**
  * Sets up the game canvas and components of the game.
@@ -267,19 +272,44 @@ function Component(width, height, color, x, y) {
    * Reverse direction, as if it is bouncing off a paddle.
    */
   this.paddle_bounce = function() {
-    // TODO:  Locate bug that causes occasional multi-bounces off a paddle
+    // on the right paddle, x is positive-large, and speedX is positive
+    // need to make speedX negative, then add the negative speed to the
+    // x position to move it left and get it "off" the paddle so it doesn't
+    // re-bounce
 
-    // change the speed randomly
-    this.speedX += Math.random() * paddleBounceEffect;
+    // on the left paddle, x is positive-small, and speedX is negative
+    // need to make speedX positive, then add the positive speed to the
+    // x position to move it right, and off the paddle
+
     // reverse directions in X
     this.speedX = 0-this.speedX;
     // need to back the ball up, or it will get into an infinite
     // loop of collisions!
     this.x += this.speedX;
-    // change the Y speed randomly, but do not reverse direction
-    this.speedY += Math.random() * paddleBounceEffect;
-    // back the ball up
-    this.y += this.speedY;
+
+    // change the speed randomly, in x and y, watching out for +/-
+    let increment = Math.random() * paddleBounceEffect;
+    if (this.speedX > 0) {
+      this.speedX += increment;
+    } else {
+      this.speedX -= increment;
+    }
+    increment = Math.random() * paddleBounceEffect * Y_ATTENUATOR;
+    if (this.speedY > 0) {
+      this.speedY += increment;
+    } else {
+      this.speedY -= increment;
+    }
+
+    // make sure the speed is not annoying to the player
+    // if (this.speedX < BALL_SPEED) {  // too slow
+    //   this.speedX = BALL_SPEED;
+    // }
+    // if (this.speedY < BALL_SPEED) { // too slow
+    //   this.speedY =BALL_SPEED;
+    // } else if (this.speedY > (this.speedX/Y_ATTENUATOR)) { // too much vertical bounce
+    //   this.speedY *= Y_ATTENUATOR;
+    // }
   };
 
   /**
@@ -311,13 +341,13 @@ function updateGameArea() {
     ball.paddle_bounce();
     // count bounces
     bounces++;
-    // add a point for every SCORE_INCREMENT bounces, then speed up
-    if (bounces % SCORE_INCREMENT === 0) {
+    // add a point for every BOUNCES_PER_SCORE bounces
+    if (bounces % BOUNCES_PER_SCORE === 0) {
       score++;
     }
     // increase speed every few bounces
-    if (bounces % SPEED_INCREMENT === 0) {
-      paddleBounceEffect++;
+    if (bounces % BOUNCES_PER_SPEEDUP === 0) {
+      paddleBounceEffect += SPEED_INCREMENT;
     }
   } else if (ball.collidesWith(leftEdge) || ball.collidesWith(rightEdge)) {
     // ball went off the left or right edge
