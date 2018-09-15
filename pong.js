@@ -15,6 +15,16 @@ let ball;
 let leftEdge;
 /** right edge of screen */
 let rightEdge;
+/** top edge of screen */
+let topEdge;
+/** bottom edge of screen */
+let bottomEdge;
+/** game score */
+let score = 0;
+/** bounce count */
+let bounces = 0;
+/** paddleBounceEffect the current max size of the speed change */
+let paddleBounceEffect = 1;
 
 /** @const {number} SCREEN_X x dimension of screen */
 const SCREEN_X = 480;
@@ -30,6 +40,8 @@ const PADDLE_HEIGHT = 75;
 const BALL_DIM = 20;
 /** @const {number} BALL_SPEED the speed of the ball */
 const BALL_SPEED = 2;
+/** @const {number} RANDOM_EFFECT the max size of initial randomness added */
+const RANDOM_EFFECT = 4;
 /** @const {number} PADDLE_SPEED the speed of the paddle */
 const PADDLE_SPEED = 3;
 /** @const {number} A_KEY the keycode of the 'a' key */
@@ -41,9 +53,20 @@ const UP_KEY = 38;
 /** @const {number} DOWN_KEY the keycode of the down arrow key */
 const DOWN_KEY = 40;
 /** @const {string} PADDLE_COLORS the colors of the paddles */
-const PADDLE_COLORS = "grey";
+const PADDLE_COLORS = 'grey';
 /** @const {string} BALL_COLOR the color of the ball */
-const BALL_COLOR = "grey";
+const BALL_COLOR = 'grey';
+/** @CONST {STRING} SCORE_COLOR the color of the score text */
+const SCORE_COLOR = 'blue';
+/** @const {number} BOUNCES_PER_SCORE the number of bounces per point */
+const BOUNCES_PER_SCORE = 1;
+/** @const {number} BOUNCES_PER_SPEEDUP the number of bounces per speed increase */
+const BOUNCES_PER_SPEEDUP = 5;
+/** @const {number} SPEED_INCREMENT the amount to speed up each time */
+const SPEED_INCREMENT = 0.5;
+/** @const {number} Y_ATTENUATOR the fraction to attenuate the y randomness
+ * to increase playability by reducing vertical speed */
+const Y_ATTENUATOR = 0.25;
 
 /**
  * Sets up the game canvas and components of the game.
@@ -63,12 +86,31 @@ function startGame() {
   // ball starts in the middle, moving with an initial velocity
   ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
   ball.speedX = BALL_SPEED;
-  ball.speedY = 0;
+  ball.speedY = getRandomValue() * RANDOM_EFFECT;  // random Y speed
 
   // create left and right boundaries, which are not drawn, just used
   // to detect if ball reaches the edge
-  leftEdge = new Component(1, SCREEN_Y, "black", -1, 0);
-  rightEdge = new Component(1, SCREEN_Y, "black", SCREEN_X+1, 0);
+  leftEdge = new Component(1, SCREEN_Y, 'black', -1, 0);
+  rightEdge = new Component(1, SCREEN_Y, 'black', SCREEN_X+1, 0);
+
+  // create top and bottom boundaries, which are not drawn, but
+  // used to detect if the ball bounces off the top/bottom
+  topEdge = new Component(SCREEN_X, 1, 'black', 0, -1);
+  bottomEdge = new Component(SCREEN_X, 1, 'black', 0, SCREEN_Y-1);
+}
+
+/**
+ * Generate a random number between -1 and 1
+ * @return {number} A random number between -1 and 1
+ */
+function getRandomValue() {
+  let randVal = Math.random();  // random number between 0 and 1
+  // randomly go up or down (random() returns a number between 0 and 1)
+  if ((Math.random() < 0.5)) {
+    randVal = -randVal;
+  }
+  // return the result
+  return randVal;
 }
 
 /**
@@ -120,13 +162,23 @@ let PongGame = {
    */
   stop : function() {
     clearInterval(this.interval);
+    // clear screen
+    this.clear();
+    // draw end of game message
+    let ctx = PongGame.context;
+    ctx.font = '42px Arial';
+    ctx.fillStyle = PADDLE_COLORS;
+    ctx.textAlign = 'center';
+    // note that string literals use back-single-quotes
+    ctx.fillText('Game Over!',SCREEN_X/2, SCREEN_Y/2);
+    ctx.fillText(`Score ${score}`,SCREEN_X/2, SCREEN_Y/2+42);
   }
 }; // the PongGame class
 
 /**
  * @class Represents rectangular shaped component such as a paddle or ball,
  * which can draw itself (update()), move itself (newPos()), and detect a
- * collision with other Components (crashWith()).
+ * collision with other Components (collidesWith()).
  * @param {number} width The width of the rectangle
  * @param {number} height The height of the rectangle
  * @param {string} color The color to fill the rectangle
@@ -170,13 +222,8 @@ function Component(width, height, color, x, y) {
     this.x += this.speedX;
     this.y += this.speedY;
 
-    // check to make sure we are not off the edge
-    // if (this.x < 0) { // left edge
-    //   this.x = 0;
-    // } else if (this.x > (SCREEN_X - this.width)) { // right edge
-    //   this.x = SCREEN_X - this.width;
-    // }
-    if (this.y < 0) { // top edge
+    // see if reached top or bottom edges of screen
+    if (this.y < 0) {
       this.y = 0;
     } else if (this.y > (SCREEN_Y - this.height)) { // bottom edge
       this.y = SCREEN_Y - this.height;
@@ -188,7 +235,7 @@ function Component(width, height, color, x, y) {
    * @param otherObj The other object to determine if they overlap
    * @returns {boolean} True if the two objects collide.
    */
-  this.crashWith = function(otherObj) {
+  this.collidesWith = function(otherObj) {
 
     // where are this object's edges?
     /** @type {number} myLeft The left edge of this object */
@@ -222,17 +269,64 @@ function Component(width, height, color, x, y) {
   };
 
   /**
-   * Reverse direction, as if it is bouncing off an object.
+   * Reverse direction, as if it is bouncing off a paddle.
    */
-  this.bounce = function() {
-    // reverse directions
+  this.paddle_bounce = function() {
+    // on the right paddle, x is positive-large, and speedX is positive
+    // need to make speedX negative, then add the negative speed to the
+    // x position to move it left and get it "off" the paddle so it doesn't
+    // re-bounce
+
+    // on the left paddle, x is positive-small, and speedX is negative
+    // need to make speedX positive, then add the positive speed to the
+    // x position to move it right, and off the paddle
+
+    // reverse directions in X
     this.speedX = 0-this.speedX;
     // need to back the ball up, or it will get into an infinite
     // loop of collisions!
     this.x += this.speedX;
-    // repeat for the y direction
-    this.speedY = -this.speedY;
+
+    // change the speed randomly, in x and y, watching out for +/-
+    let increment = Math.random() * paddleBounceEffect;
+    if (this.speedX > 0) {
+      this.speedX += increment;
+    } else {
+      this.speedX -= increment;
+    }
+    increment = Math.random() * paddleBounceEffect * Y_ATTENUATOR;
+    if (this.speedY > 0) {
+      this.speedY += increment;
+    } else {
+      this.speedY -= increment;
+    }
+
+    // make sure the speed is not annoying to the player
+    // if (this.speedX < BALL_SPEED) {  // too slow
+    //   this.speedX = BALL_SPEED;
+    // }
+    // if (this.speedY < BALL_SPEED) { // too slow
+    //   this.speedY =BALL_SPEED;
+    // } else if (this.speedY > (this.speedX/Y_ATTENUATOR)) { // too much vertical bounce
+    //   this.speedY *= Y_ATTENUATOR;
+    // }
+  };
+
+  /**
+   * Reverse y direction, as if it is bouncing off the top/bottom.
+   */
+  this.wall_bounce = function() {
+    // reverse the y speed
+    // if it was going down (positive speed) it will now be
+    // going up (negative speed), and vice versa
+    this.speedY = 0-this.speedY;
+    // back the ball away from the wall
+    // if speed WAS negative (moving towards top wall), the speed will
+    // be positive now, and we want to move it down, so just add it
+    // if the speed WAS positive (moving towards bottom wall), the
+    // the speed is now negative, so add it to move up.
     this.y += this.speedY;
+
   };
 }
 
@@ -241,18 +335,40 @@ function Component(width, height, color, x, y) {
  */
 function updateGameArea() {
   // see if we had collisions, or can just redraw
-  if (leftPaddle.crashWith(ball) || (rightPaddle.crashWith(ball))) {
+  if (leftPaddle.collidesWith(ball) || (rightPaddle.collidesWith(ball))) {
     // detect if two objects crashed together
-    // if we had a collision, stop
-    ball.bounce();
-  } else if (ball.crashWith(leftEdge) || ball.crashWith(rightEdge)) {
+    // if we had a collision, paddle_bounce
+    ball.paddle_bounce();
+    // count bounces
+    bounces++;
+    // add a point for every BOUNCES_PER_SCORE bounces
+    if (bounces % BOUNCES_PER_SCORE === 0) {
+      score++;
+    }
+    // increase speed every few bounces
+    if (bounces % BOUNCES_PER_SPEEDUP === 0) {
+      paddleBounceEffect += SPEED_INCREMENT;
+    }
+  } else if (ball.collidesWith(leftEdge) || ball.collidesWith(rightEdge)) {
     // ball went off the left or right edge
     PongGame.stop();
+  } else if (ball.collidesWith(topEdge) || ball.collidesWith(bottomEdge)) {
+    // if the ball hits the top or bottom edge
+    ball.wall_bounce();
   } else {
     // no collision, so redraw the screen and move everything
     // clear the screen
     PongGame.clear();
 
+    ///////
+    // Draw score
+    ///////
+    let ctx = PongGame.context;
+    ctx.font = '24px Arial';
+    ctx.fillStyle = SCORE_COLOR;
+    ctx.textAlign = 'center';
+    // note that string literals use back-single-quotes
+    ctx.fillText(`Score ${score}`,SCREEN_X/2,30);
 
     ///////
     // Movement of the paddles
