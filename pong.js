@@ -344,10 +344,10 @@ function updateGameArea() {
   moveBall();
 
   // Move the left paddle
-  moveLeftPaddle();
+  movePaddle(leftPaddle, A_KEY, Z_KEY);
 
   // Move the right paddle
-  moveRightPaddle();
+  movePaddle(rightPaddle, UP_KEY, DOWN_KEY);
 }
 
 /**
@@ -380,42 +380,26 @@ function drawScore() {
 }
 
 /**
- * Handle the movement of the left paddle.
+ * Handle the movement of the paddle.
+ * @param thisPaddle Which paddle to move
+ * @param thisKeyUp Which key means "move paddle up"
+ * @param thisKeyDown Which key means "move paddle down"
  */
-function moveLeftPaddle() {
+function movePaddle(thisPaddle, thisKeyUp, thisKeyDown) {
   // first, stop the paddle by default
-  leftPaddle.speedX = 0;
-  leftPaddle.speedY = 0;
+  thisPaddle.speedX = 0;
+  thisPaddle.speedY = 0;
 
-  // if the user presses the a or z keys
+  // if the user presses the up or down keys
   // (keycodes can be found at http://keycode.info/)
-  if (PongGame.keys && PongGame.keys[A_KEY]) {
-    leftPaddle.speedY = -PADDLE_SPEED;
+  if (PongGame.keys && PongGame.keys[thisKeyUp]) {
+    thisPaddle.speedY = -PADDLE_SPEED;
   }
-  if (PongGame.keys && PongGame.keys[Z_KEY]) {
-    leftPaddle.speedY = PADDLE_SPEED;
+  if (PongGame.keys && PongGame.keys[thisKeyDown]) {
+    thisPaddle.speedY = PADDLE_SPEED;
   }
-  leftPaddle.newPos();    // move it
-  leftPaddle.update();    // draw it
-}
-
-/**
- * Handle the movement of the right paddle
- */
-function moveRightPaddle() {
-  // first, stop the paddle
-  rightPaddle.speedX = 0;
-  rightPaddle.speedY = 0;
-  // handle the right paddle update
-  // if the user presses the up/down arrow keys, move this one
-  if (PongGame.keys && PongGame.keys[UP_KEY]) {
-    rightPaddle.speedY = -PADDLE_SPEED;
-  }
-  if (PongGame.keys && PongGame.keys[DOWN_KEY]) {
-    rightPaddle.speedY = PADDLE_SPEED;
-  }
-  rightPaddle.newPos();       // move it
-  rightPaddle.update();       // draw it
+  thisPaddle.newPos();    // move it
+  thisPaddle.update();    // draw it
 }
 
 /**
