@@ -334,78 +334,110 @@ function Component(width, height, color, x, y) {
  * Redraw the game area every few milliseconds
  */
 function updateGameArea() {
+  // clear screen
+  PongGame.clear();
+
+  // Draw score
+  drawScore();
+
+  // Move the ball
+  moveBall();
+
+  // Move the left paddle
+  moveLeftPaddle();
+
+  // Move the right paddle
+  moveRightPaddle();
+}
+
+/**
+ * Each bounce affects the game by increasing the score and
+ * changing the speed of the ball.
+ */
+function adjustAfterBounce() {
+  // count bounces
+  bounces++;
+  // add a point for every BOUNCES_PER_SCORE bounces
+  if (bounces % BOUNCES_PER_SCORE === 0) {
+    score++;
+  }
+  // increase speed every few bounces
+  if (bounces % BOUNCES_PER_SPEEDUP === 0) {
+    paddleBounceEffect += SPEED_INCREMENT;
+  }
+}
+
+/**
+ * Draw the score on the Canvas
+ */
+function drawScore() {
+  let ctx = PongGame.context;
+  ctx.font = '24px Arial';
+  ctx.fillStyle = SCORE_COLOR;
+  ctx.textAlign = 'center';
+  // note that string literals use back-single-quotes
+  ctx.fillText(`Score ${score}`,SCREEN_X/2,30);
+}
+
+/**
+ * Handle the movement of the left paddle.
+ */
+function moveLeftPaddle() {
+  // first, stop the paddle by default
+  leftPaddle.speedX = 0;
+  leftPaddle.speedY = 0;
+
+  // if the user presses the a or z keys
+  // (keycodes can be found at http://keycode.info/)
+  if (PongGame.keys && PongGame.keys[A_KEY]) {
+    leftPaddle.speedY = -PADDLE_SPEED;
+  }
+  if (PongGame.keys && PongGame.keys[Z_KEY]) {
+    leftPaddle.speedY = PADDLE_SPEED;
+  }
+  leftPaddle.newPos();    // move it
+  leftPaddle.update();    // draw it
+}
+
+/**
+ * Handle the movement of the right paddle
+ */
+function moveRightPaddle() {
+  // first, stop the paddle
+  rightPaddle.speedX = 0;
+  rightPaddle.speedY = 0;
+  // handle the right paddle update
+  // if the user presses the up/down arrow keys, move this one
+  if (PongGame.keys && PongGame.keys[UP_KEY]) {
+    rightPaddle.speedY = -PADDLE_SPEED;
+  }
+  if (PongGame.keys && PongGame.keys[DOWN_KEY]) {
+    rightPaddle.speedY = PADDLE_SPEED;
+  }
+  rightPaddle.newPos();       // move it
+  rightPaddle.update();       // draw it
+}
+
+/**
+ * Handle the movement of the ball (including bounces)
+ */
+function moveBall() {
   // see if we had collisions, or can just redraw
   if (leftPaddle.collidesWith(ball) || (rightPaddle.collidesWith(ball))) {
     // detect if two objects crashed together
     // if we had a collision, paddle_bounce
     ball.paddle_bounce();
-    // count bounces
-    bounces++;
-    // add a point for every BOUNCES_PER_SCORE bounces
-    if (bounces % BOUNCES_PER_SCORE === 0) {
-      score++;
-    }
-    // increase speed every few bounces
-    if (bounces % BOUNCES_PER_SPEEDUP === 0) {
-      paddleBounceEffect += SPEED_INCREMENT;
-    }
+    // make adjustments to the score and ball speed after a bounce
+    adjustAfterBounce();
   } else if (ball.collidesWith(leftEdge) || ball.collidesWith(rightEdge)) {
     // ball went off the left or right edge
     PongGame.stop();
   } else if (ball.collidesWith(topEdge) || ball.collidesWith(bottomEdge)) {
     // if the ball hits the top or bottom edge
     ball.wall_bounce();
-  } else {
-    // no collision, so redraw the screen and move everything
-    // clear the screen
-    PongGame.clear();
-
-    ///////
-    // Draw score
-    ///////
-    let ctx = PongGame.context;
-    ctx.font = '24px Arial';
-    ctx.fillStyle = SCORE_COLOR;
-    ctx.textAlign = 'center';
-    // note that string literals use back-single-quotes
-    ctx.fillText(`Score ${score}`,SCREEN_X/2,30);
-
-    ///////
-    // Movement of the paddles
-    ///////
-    // handle the left Paddle update
-    leftPaddle.speedX = 0;
-    leftPaddle.speedY = 0;
-
-    // if the user presses the a or z keys
-    // (keycodes can be found at http://keycode.info/)
-    if (PongGame.keys && PongGame.keys[A_KEY]) {
-      leftPaddle.speedY = -PADDLE_SPEED;
-    }
-    if (PongGame.keys && PongGame.keys[Z_KEY]) {
-      leftPaddle.speedY = PADDLE_SPEED;
-    }
-    leftPaddle.newPos();    // move it
-    leftPaddle.update();    // draw it
-
-    // handle the right paddle update
-    rightPaddle.speedX = 0;
-    rightPaddle.speedY = 0;
-    // if the user presses the up/down arrow keys, move this one
-    if (PongGame.keys && PongGame.keys[UP_KEY]) {
-      rightPaddle.speedY = -PADDLE_SPEED;
-    }
-    if (PongGame.keys && PongGame.keys[DOWN_KEY]) {
-      rightPaddle.speedY = PADDLE_SPEED;
-    }
-    rightPaddle.newPos();       // move it
-    rightPaddle.update();       // draw it
-
-    ///////
-    // Movement of the ball
-    ///////
-    // handle the ball update
-    ball.newPos();              // move it
-    ball.update();              // draw it
   }
+
+  // redraw the ball
+  ball.newPos();              // move it
+  ball.update();              // draw it
 }
