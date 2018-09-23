@@ -76,6 +76,10 @@ function startGame() {
   // call the function in the PongGame object to initialize the game
   PongGame.start();
 
+  // reset score bounces, in case of a button push
+  score = 0;
+  bounces = 0;
+
   // left paddle starts left side top
   leftPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLORS, OFFSET_X, 0);
 
@@ -281,12 +285,6 @@ function Component(width, height, color, x, y) {
     // need to make speedX positive, then add the positive speed to the
     // x position to move it right, and off the paddle
 
-    // reverse directions in X
-    this.speedX = 0-this.speedX;
-    // need to back the ball up, or it will get into an infinite
-    // loop of collisions!
-    this.x += this.speedX;
-
     // change the speed randomly, in x and y, watching out for +/-
     let increment = Math.random() * paddleBounceEffect;
     if (this.speedX > 0) {
@@ -300,6 +298,12 @@ function Component(width, height, color, x, y) {
     } else {
       this.speedY -= increment;
     }
+
+    // reverse directions in X
+    this.speedX = 0-this.speedX;
+    // need to back the ball up, or it will get into an infinite
+    // loop of collisions!
+    this.x += this.speedX;
 
     // make sure the speed is not annoying to the player
     // if (this.speedX < BALL_SPEED) {  // too slow
