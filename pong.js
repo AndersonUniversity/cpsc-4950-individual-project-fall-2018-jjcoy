@@ -67,6 +67,10 @@ const SPEED_INCREMENT = 0.5;
 /** @const {number} Y_ATTENUATOR the fraction to attenuate the y randomness
  * to increase playability by reducing vertical speed */
 const Y_ATTENUATOR = 0.25;
+/** @type {string} IMAGE If this is an image component, set to "image" */
+const IMAGE = "image";
+/** @type {string} BALL_IMG The name of the image file for the ball */
+const BALL_IMG = "tan_cd.png";
 
 /**
  * Sets up the game canvas and components of the game.
@@ -76,6 +80,10 @@ function startGame() {
   // call the function in the PongGame object to initialize the game
   PongGame.start();
 
+  // reset score bounces, in case of a button push
+  score = 0;
+  bounces = 0;
+
   // left paddle starts left side top
   leftPaddle = new Component(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_COLORS, OFFSET_X, 0);
 
@@ -84,7 +92,9 @@ function startGame() {
       SCREEN_X - OFFSET_X - PADDLE_WIDTH, SCREEN_Y - PADDLE_HEIGHT);
 
   // ball starts in the middle, moving with an initial velocity
-  ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0, SCREEN_Y/2.0);
+  //ball = new Component(BALL_DIM, BALL_DIM, BALL_COLOR, SCREEN_X/2.0,
+  // SCREEN_Y/2.0);
+  ball = new Component(BALL_DIM, BALL_DIM, BALL_IMG, SCREEN_X/2.0, SCREEN_Y/2.0, IMAGE);
   ball.speedX = BALL_SPEED;
   ball.speedY = getRandomValue() * RANDOM_EFFECT;  // random Y speed
 
@@ -181,11 +191,14 @@ let PongGame = {
  * collision with other Components (collidesWith()).
  * @param {number} width The width of the rectangle
  * @param {number} height The height of the rectangle
- * @param {string} color The color to fill the rectangle
+ * @param {string} color The color to fill the rectangle, or the name of the
+ * image file
  * @param {number} x The initial x position of the upper left corner
  * @param {number} y The initial y position of the upper left corner
+ * @param {string} type The type of the component (image or rectangle),
+ * default is rectangle
  */
-function Component(width, height, color, x, y) {
+function Component(width, height, color, x, y, type="rectangle") {
   /** @type {number} width The width of this component */
   this.width = width;
   /** @type {number} height The height of this component */
@@ -198,6 +211,14 @@ function Component(width, height, color, x, y) {
   this.speedX = 0;
   /** @type {number} speedY The y speed that it is moving */
   this.speedY = 0;
+  /** @type {string} type The type of the component (image or rectangle) */
+  this.type = type;
+
+  // if it is an image, load the image
+  if (type === "image") {
+    this.image = new Image();
+    this.image.src = color;
+  }
 
   /**
    * Update this rectangular object by redrawing it at it's current position
@@ -207,10 +228,15 @@ function Component(width, height, color, x, y) {
      *        the canvas representing the game board
      */
     let ctx = PongGame.context;  // get access to the canvas
-
-    // draw a rectangle
-    ctx.fillStyle = color;
-    ctx.fillRect(this.x, this.y, this.width, this.height);
+    // if it is an image...
+    if (type === "image") {
+      // draw the image
+      ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+    } else {
+      // draw a rectangle
+      ctx.fillStyle = color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
   };
 
   /**
@@ -281,12 +307,6 @@ function Component(width, height, color, x, y) {
     // need to make speedX positive, then add the positive speed to the
     // x position to move it right, and off the paddle
 
-    // reverse directions in X
-    this.speedX = 0-this.speedX;
-    // need to back the ball up, or it will get into an infinite
-    // loop of collisions!
-    this.x += this.speedX;
-
     // change the speed randomly, in x and y, watching out for +/-
     let increment = Math.random() * paddleBounceEffect;
     if (this.speedX > 0) {
@@ -300,6 +320,12 @@ function Component(width, height, color, x, y) {
     } else {
       this.speedY -= increment;
     }
+
+    // reverse directions in X
+    this.speedX = 0-this.speedX;
+    // need to back the ball up, or it will get into an infinite
+    // loop of collisions!
+    this.x += this.speedX;
 
     // make sure the speed is not annoying to the player
     // if (this.speedX < BALL_SPEED) {  // too slow
